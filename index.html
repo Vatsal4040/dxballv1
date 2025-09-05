@@ -7,9 +7,9 @@
 <style>
   body {
     margin: 0;
-    font-family: 'Press Start 2P', cursive;
+    font-family: 'Arial', sans-serif;
     background: #111;
-    color: #0f0;
+    color: #fff;
     text-align: center;
     overflow: hidden;
   }
@@ -33,23 +33,24 @@
   button {
     padding: 15px 30px;
     margin-top: 30px;
-    font-size: 16px;
+    font-size: 18px;
     border: none;
     border-radius: 8px;
-    background: #0f0;
-    color: #111;
+    background: #4CAF50;
+    color: white;
     cursor: pointer;
-    font-family: 'Press Start 2P', cursive;
+    font-weight: bold;
+    transition: all 0.3s;
   }
   button:hover { 
-    background: #6f6; 
+    background: #45a049;
     transform: scale(1.05);
   }
   canvas {
     display: block;
-    margin: 0 auto;
+    margin: 20px auto;
     background: #000;
-    border: 2px solid #0f0;
+    border: 2px solid #4CAF50;
     border-radius: 10px;
   }
   #hud {
@@ -57,24 +58,49 @@
     display: flex;
     justify-content: center;
     gap: 20px;
+    font-size: 18px;
+    font-weight: bold;
   }
   #hud span {
-    padding: 8px;
-    background: rgba(0, 255, 0, 0.2);
+    padding: 10px 15px;
+    background: rgba(76, 175, 80, 0.2);
     border-radius: 5px;
   }
+  h1 {
+    color: #4CAF50;
+    font-size: 36px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+  }
+  h2 {
+    color: #4CAF50;
+    font-size: 30px;
+    margin-bottom: 20px;
+  }
+  p {
+    font-size: 18px;
+    line-height: 1.6;
+    max-width: 600px;
+  }
+  .instructions {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+  }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <!-- Start Page -->
 <div id="startPage" class="page">
   <h1>DX-Ball Clone</h1>
-  <p><strong>Objective:</strong> Destroy all the bricks!</p>
-  <p><strong>Controls:</strong> Drag on mobile 📱 or use ⬅️ ➡️ keys on desktop 💻.</p>
-  <p><strong>Power-ups:</strong> Some help, some hurt. Collect wisely!</p>
-  <p><strong>Levels:</strong> Progress through 10 levels to win 🎯</p>
+  <div class="instructions">
+    <p><strong>Objective:</strong> Destroy all the bricks with your ball!</p>
+    <p><strong>Controls:</strong> Use LEFT and RIGHT arrow keys to move the paddle</p>
+    <p><strong>Power-ups:</strong> Some help, some hurt. Collect wisely!</p>
+    <p><strong>Levels:</strong> Progress through 10 levels to win!</p>
+  </div>
   <button onclick="startGame()">Start Game</button>
 </div>
 
@@ -85,7 +111,7 @@
     <span id="lives">Lives: 3</span> 
     <span id="level">Level: 1</span>
   </div>
-  <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
 </div>
 
 <!-- End Page (Game Over) -->
@@ -119,59 +145,22 @@ let paddle, ball, bricks = [], powerUps = [];
 let gameRunning = false;
 let animationId = null;
 
-// 🎵 Sounds - using base64 encoded fallback sounds to avoid external dependencies
-const sounds = {
-  paddle: new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbVtfdJivrJBhNjVgodDbq2EcBStztfLNhTgVABlSqNfDkFgoABUxgK3AtqBwOBIACCyBp8bDnGc1CgAQMoSwyL2ccD8RAAw0g7HLwqJ1PhEADjaFtM3EpHdBEAAQOYe3z8ameEIQABI7ibvRyKp6RBAAFD2LvdPKrHxFEAAWP42/1cyufkYQABhBkMDXzrGASBEBGkOSwdnRtIJKEgEcRZTD29O2hEwTAh5HlsXd1biGTxQDIEmYx9/XuohRFQQiS5rJ4dm8ilMWBSRNnMvj28CMVRcGJk+ez+Xdwo5XGAc+WJzJAAEAAQABAAEAAQA="),
-  brick: new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbVtfdJivrJBhNjVgodDbq2EcBStztfLNhTgVABlSqNfDkFgoABUxgK3AtqBwOBIACCyBp8bDnGc1CgAQMoSwyL2ccD8RAAw0g7HLwqJ1PhEADjaFtM3EpHdBEAAQOYe3z8ameEIQABI7ibvRyKp6RBAAFD2LvdPKrHxFEAAWP42/1cyufkYQABhBkMDXzrGASBEBGkOSwdnRtIJKEgEcRZTD29O2hEwTAh5HlsXd1biGTxQDIEmYx9/XuohRFQQiS5rJ4dm8ilMWBSRNnMvj28CMVRcGJk+ez+Xdwo5XGAc+WJzJAAEAAQABAAEAAQA="),
-  power: new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbVtfdJivrJBhNjVgodDbq2EcBStztfLNhTgVABlSqNfDkFgoABUxgK3AtqBwOBIACCyBp8bDnGc1CgAQMoSwyL2ccD8RAAw0g7HLwqJ1PhEADjaFtM3EpHdBEAAQOYe3z8ameEIQABI7ibvRyKp6RBAAFD2LvdPKrHxFEAAWP42/1cyufkYQABhBkMDXzrGASBEBGkOSwdnRtIJKEgEcRZTD29O2hEwTAh5HlsXd1biGTxQDIEmYx9/XuohRFQQiS5rJ4dm8ilMWBSRNnMvj28CMVRcGJk-ez-Xdwo5XGAc-WJzJAAEAAQABAAEAAQA="),
-  lose: new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbVtfdJivrJBhNjVgodDbq2EcBStztfLNhTgVABlSqNfDkFgoABUxgK3AtqBwOBIACCyBp8bDnGc1CgAQMoSwyL2ccD8RAAw0g7HLwqJ1PhEADjaFtM3EpHdBEAAQOYe3z8ameEIQABI7ibvRyKp6RBAAFD2LvdPKrHxFEAAWP42/1cyufkYQABhBkMDXzrGASBEBGkOSwdnRtIJKEgEcRZTD29O2hEwTAh5HlsXd1biGTxQDIEmYx9/XuohRFQQiS5rJ4dm8ilMWBSRNnMvj28CMVRcGJk-ez-Xdwo5XGAc-WJzJAAEAAQABAAEAAQA="),
-  gameover: new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbVtfdJivrJBhNjVgodDbq2EcBStztfLNhTgVABlSqNfDkFgoABUxgK3AtqBwOBIACCyBp8bDnGc1CgAQMoSwyL2ccD8RAAw0g7HLwqJ1PhEADjaFtM3EpHdBEAAQOYe3z8ameEIQABI7ibvRyKp6RBAAFD2LvdPKrHxFEAAWP42/1cyufkYQABhBkMDXzrGASBEBGkOSwdnRtIJKEgEcRZTD29O2hEwTAh5HlsXd1biGTxQDIEmYx9/XuohRFQQiS5rJ4dm8ilMWBSRNnMvj28CMVRcGJk-ez-Xdwo5XGAc-WJzJAAEAAQABAAEAAQA="),
-  victory: new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbVtfdJivrJBhNjVgodDbq2EcBStztfLNhTgVABlSqNfDkFgoABUxgK3AtqBwOBIACCyBp8bDnGc1CgAQMoSwyL2ccD8RAAw0g7HLwqJ1PhEADjaFtM3EpHdBEAAQOYe3z8ameEIQABI7ibvRyKp6RBAAFD2LvdPKrHxFEAAWP42/1cyufkYQABhBkMDXzrGASBEBGkOSwdnRtIJKEgEcRZTD29O2hEwTAh5HlsXd1biGTxQDIEmYx9/XuohRFQQiS5rJ4dm8ilMWBSRNnMvj28CMVRcGJk-ez-Xdwo5XGAc-WJzJAAEAAQABAAEAAQA=")
+// Keyboard state
+const keys = {
+  ArrowLeft: false,
+  ArrowRight: false
 };
-
-// Set sound volume
-Object.values(sounds).forEach(sound => {
-  sound.volume = 0.3;
-});
-
-// ===== Responsive Canvas =====
-function resizeCanvas() {
-  canvas.width = Math.min(window.innerWidth * 0.95, 800);
-  canvas.height = Math.min(window.innerHeight * 0.7, 500);
-  
-  if (paddle) {
-    // Adjust paddle position and size on resize
-    paddle.width = canvas.width * 0.15;
-    paddle.x = Math.min(paddle.x, canvas.width - paddle.width);
-    
-    // Adjust ball position and speed
-    if (ball) {
-      ball.x = Math.min(ball.x, canvas.width - ball.size);
-      ball.y = Math.min(ball.y, canvas.height - ball.size);
-      
-      // Adjust ball speed based on canvas size
-      const baseSpeed = canvas.width * 0.004;
-      const speedRatio = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy) / 
-                         Math.sqrt(2 * (canvas.width * 0.005) * (canvas.width * 0.005));
-      
-      ball.dx = (ball.dx > 0 ? 1 : -1) * baseSpeed * speedRatio;
-      ball.dy = (ball.dy > 0 ? 1 : -1) * baseSpeed * speedRatio;
-    }
-  }
-}
-
-window.addEventListener("resize", resizeCanvas);
 
 // ===== Game Elements =====
 function initGameObjects() {
   // Initialize paddle
   paddle = {
-    width: canvas.width * 0.15,
-    height: canvas.height * 0.02,
-    x: canvas.width / 2 - (canvas.width * 0.15) / 2,
-    y: canvas.height - canvas.height * 0.05,
-    speed: canvas.width * 0.02,
-    defaultWidth: canvas.width * 0.15
+    width: 120,
+    height: 15,
+    x: canvas.width / 2 - 60,
+    y: canvas.height - 30,
+    speed: 8,
+    defaultWidth: 120
   };
   
   // Initialize ball
@@ -186,10 +175,10 @@ function initGameObjects() {
 
 function createBricks() {
   bricks = [];
-  const rows = 3 + Math.min(level, 5); // Limit max rows to 8
-  const cols = 6 + Math.min(level, 3); // Limit max cols to 9
+  const rows = 3 + Math.min(level, 5);
+  const cols = 6 + Math.min(level, 3);
   const brickWidth = (canvas.width - 20) / cols - 2;
-  const brickHeight = canvas.height * 0.035;
+  const brickHeight = 25;
   const colors = ['#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF'];
   
   for (let r = 0; r < rows; r++) {
@@ -209,10 +198,10 @@ function createBricks() {
 function resetBall() {
   ball = {
     x: canvas.width / 2,
-    y: canvas.height - canvas.height * 0.1,
-    size: Math.max(canvas.width * 0.012, 6),
-    dx: canvas.width * 0.004 * (Math.random() > 0.5 ? 1 : -1),
-    dy: -canvas.width * 0.004
+    y: canvas.height - 50,
+    size: 8,
+    dx: 4 * (Math.random() > 0.5 ? 1 : -1),
+    dy: -4
   };
 }
 
@@ -225,10 +214,10 @@ function spawnPowerUp(x, y) {
   powerUps.push({
     x: x, 
     y: y, 
-    size: canvas.width * 0.02, 
-    dy: 3, 
+    size: 15, 
+    dy: 2, 
     type: type,
-    color: (type === "bigPaddle" || type === "extraLife" || type === "slowBall") ? "#0f0" : "#f00"
+    color: (type === "bigPaddle" || type === "extraLife" || type === "slowBall") ? "#4CAF50" : "#f00"
   });
 }
 
@@ -277,7 +266,6 @@ function updatePowerUps() {
         p.x + p.size >= paddle.x &&
         p.x <= paddle.x + paddle.width) {
       applyPowerUp(p.type);
-      sounds.power.play();
       powerUps.splice(i, 1);
     }
   }
@@ -339,7 +327,6 @@ function checkBrickCollision() {
       
       b.broken = true;
       score += 10;
-      sounds.brick.play();
       
       // 25% chance to spawn power-up
       if (Math.random() < 0.25) {
@@ -370,7 +357,6 @@ function checkPaddleCollision() {
   ball.dx = speed * Math.sin(angle);
   ball.dy = -speed * Math.cos(angle);
   
-  sounds.paddle.play();
   return true;
 }
 
@@ -380,8 +366,16 @@ function gameLoop() {
   
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
+  // Handle paddle movement
+  if (keys.ArrowLeft) {
+    paddle.x = Math.max(0, paddle.x - paddle.speed);
+  }
+  if (keys.ArrowRight) {
+    paddle.x = Math.min(canvas.width - paddle.width, paddle.x + paddle.speed);
+  }
+  
   // Draw paddle
-  ctx.fillStyle = "#0f0";
+  ctx.fillStyle = "#4CAF50";
   ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
   
   // Draw ball
@@ -415,17 +409,14 @@ function gameLoop() {
   if (ball.x - ball.size < 0) {
     ball.x = ball.size;
     ball.dx *= -1;
-    sounds.paddle.play();
   } else if (ball.x + ball.size > canvas.width) {
     ball.x = canvas.width - ball.size;
     ball.dx *= -1;
-    sounds.paddle.play();
   }
   
   if (ball.y - ball.size < 0) {
     ball.y = ball.size;
     ball.dy *= -1;
-    sounds.paddle.play();
   }
   
   // Check collisions
@@ -435,7 +426,6 @@ function gameLoop() {
   // Ball fell below paddle
   if (ball.y - ball.size > canvas.height) {
     lives--;
-    sounds.lose.play();
     
     if (lives <= 0) {
       endGame();
@@ -470,44 +460,15 @@ function gameLoop() {
   animationId = requestAnimationFrame(gameLoop);
 }
 
-// ===== Controls =====
-let keys = {};
-document.addEventListener("keydown", e => {
-  keys[e.key] = true;
+// ===== Keyboard Controls =====
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") keys.ArrowLeft = true;
+  if (e.key === "ArrowRight") keys.ArrowRight = true;
 });
 
-document.addEventListener("keyup", e => {
-  keys[e.key] = false;
-});
-
-function handlePaddleMovement() {
-  if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
-    paddle.x = Math.max(0, paddle.x - paddle.speed);
-  }
-  if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
-    paddle.x = Math.min(canvas.width - paddle.width, paddle.x + paddle.speed);
-  }
-}
-
-// Touch controls
-let touchStartX = 0;
-let paddleStartX = 0;
-
-canvas.addEventListener("touchstart", e => {
-  const touch = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  touchStartX = touch.clientX - rect.left;
-  paddleStartX = paddle.x;
-});
-
-canvas.addEventListener("touchmove", e => {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  const touchX = touch.clientX - rect.left;
-  const deltaX = touchX - touchStartX;
-  
-  paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, paddleStartX + deltaX));
+document.addEventListener("keyup", (e) => {
+  if (e.key === "ArrowLeft") keys.ArrowLeft = false;
+  if (e.key === "ArrowRight") keys.ArrowRight = false;
 });
 
 // ===== Page Navigation =====
@@ -521,7 +482,6 @@ function startGame() {
   lives = 3;
   level = 1;
   
-  resizeCanvas();
   initGameObjects();
   
   gameRunning = true;
@@ -535,7 +495,6 @@ function endGame() {
   gamePage.style.display = "none";
   endPage.style.display = "flex";
   document.getElementById("finalScore").textContent = `Final Score: ${score} | Level Reached: ${level}`;
-  sounds.gameover.play();
 }
 
 function victoryGame() {
@@ -545,12 +504,11 @@ function victoryGame() {
   gamePage.style.display = "none";
   victoryPage.style.display = "flex";
   document.getElementById("victoryScore").textContent = `You Won! Final Score: ${score}`;
-  sounds.victory.play();
 }
 
 function goToStart() {
   gameRunning = false;
-  cancelAnimationFrame(animationId);
+  if (animationId) cancelAnimationFrame(animationId);
   
   endPage.style.display = "none";
   victoryPage.style.display = "none";
@@ -559,15 +517,8 @@ function goToStart() {
 
 // Initialize the game
 window.addEventListener("load", () => {
-  resizeCanvas();
+  startPage.style.display = "flex";
 });
-
-// Handle game updates
-setInterval(() => {
-  if (gameRunning) {
-    handlePaddleMovement();
-  }
-}, 16); // ~60fps
 </script>
 </body>
 </html>
