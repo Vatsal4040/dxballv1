@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DX-Ball Clone</title>
+  <title>DX-Ball Clone with Levels & Powerups</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -33,7 +33,7 @@
 </head>
 <body>
   <div id="hud">
-    <span id="score">Score: 0</span> &nbsp; | &nbsp; <span id="lives">Lives: 3</span>
+    <span id="score">Score: 0</span> &nbsp; | &nbsp; <span id="lives">Lives: 3</span> &nbsp; | &nbsp; <span id="level">Level: 1</span>
   </div>
   <canvas id="gameCanvas" width="800" height="600"></canvas>
 
@@ -42,41 +42,18 @@
     const ctx = canvas.getContext("2d");
     const scoreEl = document.getElementById("score");
     const livesEl = document.getElementById("lives");
+    const levelEl = document.getElementById("level");
 
-    // Paddle
-    const paddle = {
-      width: 100,
-      height: 15,
-      x: canvas.width / 2 - 50,
-      y: canvas.height - 30,
-      speed: 7,
-      dx: 0
-    };
+    const paddle = { width: 100, height: 15, x: canvas.width / 2 - 50, y: canvas.height - 30, speed: 7, dx: 0 };
+    const ball = { x: canvas.width / 2, y: canvas.height - 50, size: 10, speed: 4, dx: 4, dy: -4 };
 
-    // Ball
-    const ball = {
-      x: canvas.width / 2,
-      y: canvas.height - 50,
-      size: 10,
-      speed: 4,
-      dx: 4,
-      dy: -4
-    };
-
-    // Bricks
-    const brick = {
-      rowCount: 5,
-      colCount: 8,
-      width: 75,
-      height: 20,
-      padding: 10,
-      offsetTop: 30,
-      offsetLeft: 35
-    };
+    const brick = { rowCount: 5, colCount: 8, width: 75, height: 20, padding: 10, offsetTop: 30, offsetLeft: 35 };
 
     let bricks = [];
     let score = 0;
     let lives = 3;
+    let level = 1;
+    let powerups = [];
 
     function createBricks() {
       bricks = [];
@@ -90,7 +67,12 @@
       }
     }
 
-    createBricks();
+    function resetBall() {
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height - 50;
+      ball.dx = 4;
+      ball.dy = -4;
+    }
 
     function drawPaddle() {
       ctx.fillStyle = "#00f";
@@ -116,6 +98,13 @@
       });
     }
 
+    function drawPowerups() {
+      powerups.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      });
+    }
+
     function movePaddle() {
       paddle.x += paddle.dx;
       if (paddle.x < 0) paddle.x = 0;
@@ -126,38 +115,39 @@
       ball.x += ball.dx;
       ball.y += ball.dy;
 
-      if (ball.x + ball.size > canvas.width || ball.x - ball.size < 0) {
-        ball.dx *= -1;
-      }
-      if (ball.y - ball.size < 0) {
-        ball.dy *= -1;
-      }
+      if (ball.x + ball.size > canvas.width || ball.x - ball.size < 0) ball.dx *= -1;
+      if (ball.y - ball.size < 0) ball.dy *= -1;
 
-      if (
-        ball.x > paddle.x &&
-        ball.x < paddle.x + paddle.width &&
-        ball.y + ball.size > paddle.y
-      ) {
+      if (ball.x > paddle.x && ball.x < paddle.x + paddle.width && ball.y + ball.size > paddle.y) {
         ball.dy = -ball.speed;
       }
 
+      let bricksLeft = 0;
       bricks.forEach(row => {
         row.forEach(b => {
           if (b.status === 1) {
-            if (
-              ball.x > b.x &&
-              ball.x < b.x + brick.width &&
-              ball.y - ball.size < b.y + brick.height &&
-              ball.y + ball.size > b.y
-            ) {
+            bricksLeft++;
+            if (ball.x > b.x && ball.x < b.x + brick.width && ball.y - ball.size < b.y + brick.height && ball.y + ball.size > b.y) {
               ball.dy *= -1;
               b.status = 0;
               score += 10;
               scoreEl.textContent = "Score: " + score;
+
+              if (Math.random() < 0.2) {
+                spawnPowerup(b.x + brick.width / 2, b.y + brick.height / 2);
+              }
             }
           }
         });
       });
+
+      if (bricksLeft === 0) {
+        level++;
+        levelEl.textContent = "Level: " + level;
+        brick.rowCount++;
+        resetBall();
+        createBricks();
+      }
 
       if (ball.y + ball.size > canvas.height) {
         lives--;
@@ -171,11 +161,39 @@
       }
     }
 
-    function resetBall() {
-      ball.x = canvas.width / 2;
-      ball.y = canvas.height - 50;
-      ball.dx = 4;
-      ball.dy = -4;
+    function spawnPowerup(x, y) {
+      const types = [
+        { effect: 'bigPaddle', color: '#0ff' },
+        { effect: 'extraLife', color: '#ff0' },
+        { effect: 'multiBall', color: '#f0f' },
+        { effect: 'fireBall', color: '#f90' },
+        { effect: 'smallPaddle', color: '#888' },
+        { effect: 'shrinkBall', color: '#ccc' },
+        { effect: 'loseLife', color: '#900' }
+      ];
+      const pick = types[Math.floor(Math.random() * types.length)];
+      powerups.push({ x, y, size: 15, speed: 2, effect: pick.effect, color: pick.color });
+    }
+
+    function movePowerups() {
+      powerups.forEach((p, i) => {
+        p.y += p.speed;
+        if (p.y > canvas.height) powerups.splice(i, 1);
+        if (p.x > paddle.x && p.x < paddle.x + paddle.width && p.y + p.size > paddle.y && p.y < paddle.y + paddle.height) {
+          applyPowerup(p.effect);
+          powerups.splice(i, 1);
+        }
+      });
+    }
+
+    function applyPowerup(effect) {
+      if (effect === 'bigPaddle') paddle.width += 30;
+      if (effect === 'smallPaddle' && paddle.width > 50) paddle.width -= 30;
+      if (effect === 'extraLife') { lives++; livesEl.textContent = "Lives: " + lives; }
+      if (effect === 'loseLife') { lives--; livesEl.textContent = "Lives: " + lives; }
+      if (effect === 'shrinkBall' && ball.size > 5) ball.size -= 2;
+      if (effect === 'fireBall') ball.color = '#ff4500';
+      if (effect === 'multiBall') { score += 50; scoreEl.textContent = "Score: " + score; }
     }
 
     function draw() {
@@ -183,15 +201,18 @@
       drawPaddle();
       drawBall();
       drawBricks();
+      drawPowerups();
     }
 
     function update() {
       movePaddle();
       moveBall();
+      movePowerups();
       draw();
       requestAnimationFrame(update);
     }
 
+    createBricks();
     update();
 
     document.addEventListener("keydown", e => {
